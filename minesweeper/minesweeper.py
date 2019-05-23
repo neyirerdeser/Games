@@ -146,7 +146,8 @@ class Game:
                 return False
         if key == 'flag':
             self.flag(i, j)
-        self.print_game()
+        if not test:
+            self.print_game()
         return True
 
     def get_move(self, test, mode, i, j):
@@ -203,7 +204,6 @@ class Game:
             for l in range(length):
                 print('----', end='')
             print()
-
         print('  | ', end='')
         for i in range(self.size):
             print(i % 10, end='   ')
@@ -267,11 +267,12 @@ class Game:
         self.print_game()
         print('GAME OVER\nmines exploded: %d\nplay again? (Y/N)' % mines_left)
 
-    def won(self):
+    def won(self, test):
         for (a, b) in self.flagged:
             if self.board[a][b] != 9:
                 return False
-        print('CONGRATULATIONS\nplay again? (Y/N)')
+        if not test:
+            print('CONGRATULATIONS\nplay again? (Y/N)')
         return True
 
     @classmethod
@@ -294,13 +295,12 @@ class Game:
                     curr_mode = mode[turn]
                     curr_i = i[turn]
                     curr_j = j[turn]
-                print('pushing', curr_i, curr_j)
 
             while game.play(test, curr_mode, curr_i, curr_j):
 
                 mines_left = game.mines - len(game.flagged)
                 hidden = game.size ** 2 - len(game.revealed) - len(game.flagged)
-                if (mines_left == 0 or hidden == mines_left) and game.won():
+                if (mines_left == 0 or hidden == mines_left) and game.won(test):
                     break
                 turn += 1
                 if test:
@@ -325,7 +325,6 @@ class Game:
                             curr_mode = mode[turn]
                             curr_i = i[turn]
                             curr_j = j[turn]
-                    print('pushing', curr_i, curr_j)
             else:
                 game.lost()
             valid = False
