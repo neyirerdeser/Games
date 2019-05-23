@@ -1,286 +1,348 @@
 import random
 
-revealed = []
-flagged = []
 
+class Game:
+    revealed = []
+    flagged = []
+    board = []
+    level = None
+    size = None
+    mines = None
 
-def print_game(brd):
-    def horizontal():
-        print()
-        print('--+-', end='')
-        for i in range(len(brd)):
-            print('----', end='')
-        print()
+    def __init__(self, level):
+        self.revealed.clear()
+        self.flagged.clear()
+        self.board = []
+        self.level = level
+        self.size = self.set_level()[0]
+        self.mines = self.set_level()[1]
+        self.put_mines()
+        self.put_numbers()
 
-    print('  | ', end='')
-    for i in range(len(brd)):
-        print(i % 10, end='   ')
-    horizontal()
-    for i in range(len(brd)):
-        print(i % 10, '| ', end='')
-        for j in range(len(brd)):
-            if (i, j) in revealed:
-                if brd[i][j] == 9:
-                    print('X', end=' | ')
-                elif brd[i][j] == 0:
-                    print('.', end=' | ')
-                else:
-                    print(brd[i][j], end=' | ')
-            elif (i, j) in flagged:
-                print('f', end=' | ')
-            else:
-                print(' ', end=' | ')
-        horizontal()
+    def set_level(self):
+        if self.level == 1:
+            return tuple((8, 10))
+        if self.level == 2:
+            return tuple((16, 40))
+        if self.level == 3:
+            return tuple((24, 99))
 
+    def put_mines(self):
+        mine_rows = []
+        mine_cols = []
 
-def put_mines(lvl):
-    size = 0
-    mines = 0
-    mine_rows = []
-    mine_cols = []
+        for i in range(self.mines):
+            mine_rows.append(random.randint(0, self.size - 1))
+            valid = False
+            c = 0
+            while not valid:
+                valid = True
+                c = random.randint(0, self.size - 1)
+                for j in range(len(mine_rows) - 1):
+                    if mine_rows[j] == mine_rows[i] and mine_cols[j] == c:
+                        valid = False
 
-    if lvl == 1:
-        size = 8
-        mines = 10
-    if lvl == 2:
-        size = 16
-        mines = 40
-    if lvl == 3:
-        size = 24
-        mines = 99
+            mine_cols.append(c)
 
-    for i in range(mines):
-        mine_rows.append(random.randint(0, size - 1))
-        valid = False
-        c = 0
-        while not valid:
-            valid = True
-            c = random.randint(0, size - 1)
-            for j in range(len(mine_rows) - 1):
-                if mine_rows[j] == mine_rows[i] and mine_cols[j] == c:
-                    valid = False
+        mined = [[0] * self.size for _ in range(self.size)]
+        for i in range(self.mines):
+            mined[mine_rows[i]][mine_cols[i]] = 9  # max number written on board can be 8, so 9 is a mine
+        self.board.extend(mined)
 
-        mine_cols.append(c)
+    def put_numbers(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                location_keys = self.location_checks(i, j)
+                if self.board[i][j] != 9:
+                    self.check_increase(location_keys, i, j)
 
-    board = [[0] * size for _ in range(size)]
-    for i in range(mines):
-        board[mine_rows[i]][mine_cols[i]] = 9  # max number written on board can be 8, so 9 is a mine
-    return board
-
-
-def location_checks(board, i, j):
-    def location():
+    def location_checks(self, i, j):
         # corners: A C G I
         # borders: B D F H
-        end = len(board) - 1
+        end = self.size - 1
         if i == 0:
-            # A B C
             if j == 0:
-                return 'A'
+                return [5, 7, 8]  # A
             elif j == end:
-                return 'C'
+                return [4, 6, 7]  # C
             else:
-                return 'B'
+                return [4, 5, 6, 7, 8]  # B
         elif i == end:
-            # G H I
             if j == 0:
-                return 'G'
+                return [2, 3, 5]  # G
             elif j == end:
-                return 'I'
+                return [1, 2, 4]  # I
             else:
-                return 'H'
+                return [1, 2, 3, 4, 5]  # H
         elif j == 0:
-            return 'D'
+            return [2, 3, 5, 7, 8]  # D
         elif j == end:
-            return 'F'
+            return [1, 2, 4, 6, 7]  # F
         else:
-            return 'E'
+            return [1, 2, 3, 4, 5, 6, 7, 8]  # E
 
-    a = []
-    if location() == 'A':
-        a = [5, 7, 8]
-    if location() == 'B':
-        a = [4, 5, 6, 7, 8]
-    if location() == 'C':
-        a = [4, 6, 7]
-    if location() == 'D':
-        a = [2, 3, 5, 7, 8]
-    if location() == 'E':
-        a = [1, 2, 3, 4, 5, 6, 7, 8]
-    if location() == 'F':
-        a = [1, 2, 4, 6, 7]
-    if location() == 'G':
-        a = [2, 3, 5]
-    if location() == 'H':
-        a = [1, 2, 3, 4, 5]
-    if location() == 'I':
-        a = [1, 2, 4]
-    return a
+    def check_increase(self, a, i, j):
+        if 1 in a and self.board[i - 1][j - 1] == 9:
+            self.board[i][j] += 1
+        if 2 in a and self.board[i - 1][j] == 9:
+            self.board[i][j] += 1
+        if 3 in a and self.board[i - 1][j + 1] == 9:
+            self.board[i][j] += 1
+        if 4 in a and self.board[i][j - 1] == 9:
+            self.board[i][j] += 1
+        if 5 in a and self.board[i][j + 1] == 9:
+            self.board[i][j] += 1
+        if 6 in a and self.board[i + 1][j - 1] == 9:
+            self.board[i][j] += 1
+        if 7 in a and self.board[i + 1][j] == 9:
+            self.board[i][j] += 1
+        if 8 in a and self.board[i + 1][j + 1] == 9:
+            self.board[i][j] += 1
 
+    def flag(self, i, j):
+        if (i, j) not in self.flagged:
+            self.flagged.append((i, j))
+        else:
+            self.flagged.remove((i, j))
 
-def put_numbers(board):
-    def check_increase(a):
-        if 1 in a and board[i - 1][j - 1] == 9:
-            board[i][j] += 1
-        if 2 in a and board[i - 1][j] == 9:
-            board[i][j] += 1
-        if 3 in a and board[i - 1][j + 1] == 9:
-            board[i][j] += 1
-        if 4 in a and board[i][j - 1] == 9:
-            board[i][j] += 1
-        if 5 in a and board[i][j + 1] == 9:
-            board[i][j] += 1
-        if 6 in a and board[i + 1][j - 1] == 9:
-            board[i][j] += 1
-        if 7 in a and board[i + 1][j] == 9:
-            board[i][j] += 1
-        if 8 in a and board[i + 1][j + 1] == 9:
-            board[i][j] += 1
+    def reveal(self, i, j):
+        self.revealed.append((i, j))
+        if self.board[i][j] == 0:
+            a = self.location_checks(i, j)
+            if 1 in a and (i - 1, j - 1) not in (self.revealed or self.flagged):
+                self.reveal(i - 1, j - 1)
+            if 2 in a and (i - 1, j) not in (self.revealed or self.flagged):
+                self.reveal(i - 1, j)
+            if 3 in a and (i - 1, j + 1) not in (self.revealed or self.flagged):
+                self.reveal(i - 1, j + 1)
+            if 4 in a and (i, j - 1) not in (self.revealed or self.flagged):
+                self.reveal(i, j - 1)
+            if 5 in a and (i, j + 1) not in (self.revealed or self.flagged):
+                self.reveal(i, j + 1)
+            if 6 in a and (i + 1, j - 1) not in (self.revealed or self.flagged):
+                self.reveal(i + 1, j - 1)
+            if 7 in a and (i + 1, j) not in (self.revealed or self.flagged):
+                self.reveal(i + 1, j)
+            if 8 in a and (i + 1, j + 1) not in (self.revealed or self.flagged):
+                self.reveal(i + 1, j + 1)
 
-    for i in range(len(board)):
-        for j in range(len(board)):
-            loc_keys = location_checks(board, i, j)
-            if board[i][j] != 9:
-                check_increase(loc_keys)
+    def reveal_all(self):
+        for (a, b) in self.flagged:
+            if self.board[a][b] != 9:
+                self.flagged.remove((a, b))
+        for i in range(self.size):
+            for j in range(self.size):
+                if (i, j) not in self.flagged:
+                    self.reveal(i, j)
 
+    def play(self, test, mode, i, j):
+        move = self.get_move(test, mode, i, j)
+        key = move[0]
+        i = move[1]
+        j = move[2]
+        if key == 'open':
+            self.reveal(i, j)
+            if self.board[i][j] == 9:
+                return False
+        if key == 'flag':
+            self.flag(i, j)
+        self.print_game()
+        return True
 
-def play(board):
-    def reveal(i, j):
-        revealed.append((i, j))
-        if board[i][j] == 0:
-            a = location_checks(board, i, j)
-            if 1 in a and (i - 1, j - 1) not in (revealed or flagged):
-                reveal(i - 1, j - 1)
-            if 2 in a and (i - 1, j) not in (revealed or flagged):
-                reveal(i - 1, j)
-            if 3 in a and (i - 1, j + 1) not in (revealed or flagged):
-                reveal(i - 1, j + 1)
-            if 4 in a and (i, j - 1) not in (revealed or flagged):
-                reveal(i, j - 1)
-            if 5 in a and (i, j + 1) not in (revealed or flagged):
-                reveal(i, j + 1)
-            if 6 in a and (i + 1, j - 1) not in (revealed or flagged):
-                reveal(i + 1, j - 1)
-            if 7 in a and (i + 1, j) not in (revealed or flagged):
-                reveal(i + 1, j)
-            if 8 in a and (i + 1, j + 1) not in (revealed or flagged):
-                reveal(i + 1, j + 1)
-
-    end = len(board) - 1
-    print('coordinates: (row  column)\nto place a flag follow the format: f <row> <column> ')
-    valid = False
-    while not valid:
-        coord = input()
-        click = coord.split(' ')
-        if len(click) == 2:
-            # r, c = 0, 0
-            try:
-                r = int(click[0])
-                c = int(click[1])
-            except:
-                print('coordinates must be integers')
-                continue
-            if r > end or c > end:
-                print('location outside the game, careful first box is 0 0. choose a different box (row  column): ')
-            elif (r, c) in revealed:
-                print('box already open, choose a different box (row  column): ')
-            elif (r, c) in flagged:
-                print('box is flagged, to unflag enter the same command as flagging')
-            else:
-                valid = True
-                reveal(r, c)
-                if board[r][c] == 9:
-                    return False
-        elif len(click) == 3:
-            if click[0] != 'f':
-                print(
-                    'please give two numbers seperated by space to enter coordinates\n'
-                    'to place a flag follow the format: f <row> <column>')
-                continue
-            try:
-                r = int(click[1])
-                c = int(click[2])
-            except:
-                print('coordinates must be integers')
-                continue
-            if r > end or c > end:
-                print('location outside the game, careful first box is 0 0. choose a different box (row  column): ')
-            elif (r, c) in revealed:
-                print('box already open, choose a different box (row  column): ')
-            else:
-                valid = True
-                if (r, c) not in flagged:
-                    flagged.append((r, c))
+    def get_move(self, test, mode, i, j):
+        end = self.size - 1
+        if not test:
+            print('coordinates in format <row>  <column>\nto place a flag follow the format: f <row> <column> ')
+            while True:
+                coord = input()
+                click = coord.split(' ')
+                if len(click) == 2:
+                    try:
+                        r = int(click[0])
+                        c = int(click[1])
+                    except (TypeError, ValueError):
+                        print('both coordinates must be integers')
+                        continue
+                    if r > end or c > end:
+                        print('location outside the game, careful first box is 0 0. '
+                              'choose a different box (row  column): ')
+                    elif (r, c) in self.revealed:
+                        print('box already open, choose a different box (row  column): ')
+                    elif (r, c) in self.flagged:
+                        print('box is flagged, to unflag enter the same command as flagging')
+                    else:
+                        return tuple(('open', r, c))
+                elif len(click) == 3:
+                    if click[0] != 'f':
+                        print(
+                            'please give two numbers seperated by space to enter coordinates\n'
+                            'to place a flag follow the format: f <row> <column>')
+                        continue
+                    try:
+                        r = int(click[1])
+                        c = int(click[2])
+                    except (TypeError, ValueError):
+                        print('both coordinates must be integers')
+                        continue
+                    if r > end or c > end:
+                        print('location outside the game, careful first box is 0 0. '
+                              'choose a different box (row  column): ')
+                    elif (r, c) in self.revealed:
+                        print('box already open, choose a different box (row  column): ')
+                    else:
+                        return tuple(('flag', r, c))
                 else:
-                    flagged.remove((r, c))
-        else:
-            print('please give two numbers seperated by space to enter coordinates')
-    print_game(board)
-    return True
+                    print('please give two numbers separated by space to enter coordinates')
+        else:  # in test
+            return tuple((mode, i, j))
 
+    def print_game(self):
+        def horizontal(length):
+            print()
+            print('--+-', end='')
+            for l in range(length):
+                print('----', end='')
+            print()
 
-def minesweeper():
-    playing = True
-    while playing:
-        revealed.clear()
-        flagged.clear()
-        print('level of difficulty:\n'
-              '1. Beginner\n2. Intermediate\n3. Expert\nYour choice: ')
+        print('  | ', end='')
+        for i in range(self.size):
+            print(i % 10, end='   ')
+        horizontal(self.size)
+        for i in range(self.size):
+            print(i % 10, '| ', end='')
+            for j in range(self.size):
+                char = ' '
+                if (i, j) in self.revealed:
+                    if self.board[i][j] == 9:
+                        char = 'X'
+                    elif self.board[i][j] == 0:
+                        char = '.'
+                    else:
+                        char = self.board[i][j]
+                elif (i, j) in self.flagged:
+                    char = 'f'
+                print(char, end=' | ')
+            horizontal(self.size)
+        print('mines left:', self.mines - len(self.flagged))
+
+    @classmethod
+    def intro(cls):
+        print('Welcome to minesweeper\n'
+              'some notes for after you choose the level you want to play\n'
+              '* to open a box, you will enter your coordinates in the format:'
+              ' <row> <column> of your desired number (eg. 2 5)\n'
+              '* to (un)flag a box put an 'f' in front of your coordinates (eg. f 4 3)\n'
+              '* game ends when all unopened or flagged boxes are mines\n'
+              '* empty boxes are shown with a . in them for convenience\n'
+              '* keep in mind that the upper left corner has coordinates 0 0\n'
+              '  and that numbers on the side repeat for each 10 rows/column,'
+              ' you should type the real number that would be there\n'
+              'lets start :)\n')
+
+    @classmethod
+    def get_level(cls, test, lvl=None):
+        if not test:
+            print('level of difficulty:\n'
+                  '1. Beginner\n2. Intermediate\n3. Expert\nYour choice: ')
         level = 0
         valid = False
         while not valid:
             try:
-                level = int(input())
-            except:
+                if lvl is None:
+                    level = int(input())
+                else:
+                    level = lvl
+            except (TypeError, ValueError):
                 print('level must be a number')
                 continue
             if level not in (1, 2, 3):
                 print('invalid answer entered')
             else:
                 valid = True
-        game = put_mines(level)
-        mines = 0
-        for i in range(len(game)):
-            for j in range(len(game)):
-                if game[i][j] == 9:
-                    mines += 1
-        put_numbers(game)
-        print_game(game)
-        print('mines left:', mines - len(flagged))
-        while play(game):
-            mines_left = mines - len(flagged)
-            hidden = len(game) ** 2 - len(revealed) - len(flagged)
-            if mines_left == 0 or hidden == mines_left:
-                win = True
-                for (a, b) in flagged:
-                    if game[a][b] != 9:
-                        win = False
-                if win:
-                    print('CONGRATULATIONS\nplay again? (Y/N)')
+        return level
+
+    def lost(self):
+        mines_left = self.mines - len(self.flagged)
+        self.reveal_all()
+        self.print_game()
+        print('GAME OVER\nmines exploded: %d\nplay again? (Y/N)' % mines_left)
+
+    def won(self):
+        for (a, b) in self.flagged:
+            if self.board[a][b] != 9:
+                return False
+        print('CONGRATULATIONS\nplay again? (Y/N)')
+        return True
+
+    @classmethod
+    def minesweeper(cls, test, mode=None, i=None, j=None, lvl=None):
+        playing = True
+        while playing:
+            level = cls.get_level(test, lvl)
+            game = Game(level)
+            game.print_game()
+            turn = 0
+            curr_mode = None
+            curr_i = None
+            curr_j = None
+            if test:
+                if mode[turn] is None or mode[turn] not in ('open', 'flag'):
+                    raise Exception('mode must be open or flag')
+                elif i[turn] is None or j[turn] is None:
+                    raise Exception('test mode needs coordinates')
+                else:
+                    curr_mode = mode[turn]
+                    curr_i = i[turn]
+                    curr_j = j[turn]
+                print('pushing', curr_i, curr_j)
+
+            while game.play(test, curr_mode, curr_i, curr_j):
+
+                mines_left = game.mines - len(game.flagged)
+                hidden = game.size ** 2 - len(game.revealed) - len(game.flagged)
+                if (mines_left == 0 or hidden == mines_left) and game.won():
                     break
-            print('mines left:', mines_left)
-        else:
-            mines_left = mines - len(flagged)
-            for (a, b) in flagged:
-                if game[a][b] != 9:
-                    flagged.remove((a, b))
-            for i in range(len(game)):
-                for j in range(len(game)):
-                    revealed.append((i, j))
-            print_game(game)
-            print('GAME OVER\nmines exploded: %d\nplay again? (Y/N)' % mines_left)
-        valid = False
-        while not valid:
-            answer = input()
-            if answer not in ('Y', 'N', 'y', 'n'):
-                print('invalid answer entered\ndo you want to play again? (Y/N)')
-            elif answer in ('N', 'n'):
-                print('bye')
-                playing = False
-                valid = True
+                turn += 1
+                if test:
+                    if turn >= len(mode):
+                        curr_mode = 'open'
+                        while True:
+                            curr_i = random.randint(0, game.size - 1)
+                            curr_j = random.randint(0, game.size - 1)
+                            if (curr_i, curr_j) not in game.revealed:
+                                break
+                            elif hidden == 0:
+                                # then coordinates must be in game.flagged
+                                # then unflag and play
+                                game.flag(curr_i, curr_j)
+                                break
+                    else:
+                        if mode[turn] is None or mode[turn] not in ('open', 'flag'):
+                            raise Exception('mode must be open or flag')
+                        elif i[turn] is None or j[turn] is None:
+                            raise Exception('test mode needs coordinates')
+                        else:
+                            curr_mode = mode[turn]
+                            curr_i = i[turn]
+                            curr_j = j[turn]
+                    print('pushing', curr_i, curr_j)
             else:
-                valid = True
+                game.lost()
+            valid = False
+            while not valid:
+                answer = 'N'
+                if not test:
+                    answer = input()
+                if answer not in ('Y', 'N', 'y', 'n'):
+                    print('invalid answer entered\ndo you want to play again? (Y/N)')
+                elif answer in ('N', 'n'):
+                    print('bye')
+                    playing = False
+                    valid = True
+                else:
+                    valid = True
 
 
 if __name__ == '__main__':
-    minesweeper()
+    Game.intro()
+    Game.minesweeper(False)
